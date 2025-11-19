@@ -1,0 +1,26 @@
+spring:
+  # Desactivamos el cliente Eureka durante los tests
+  eureka:
+    client:
+      enabled: true
+  
+  # --- ¡CAMBIO IMPORTANTE! ---
+  # Apuntamos a tu base de datos PostgreSQL real
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: postgres
+    # ¡Pon tu contraseña real de PostgreSQL aquí!
+    password: 123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # 'create-drop' BORRARÁ Y RECREARÁ tus tablas CADA VEZ que corras el test
+      # ¡No te preocupes! Solo afecta a 'auth_db' cuando corres tests.
+      ddl-auto: create-drop 
+    show-sql: true # Mostremos el SQL para depurar
+
+# Usamos la misma clave secreta
+app:
+  jwt:
+    secret: "bXN1cGVyc2VjcmV0a2V5Zm9ydGhlc3RvcmUxMjM0NVhZWlo="
+    expiration-ms: 3600000

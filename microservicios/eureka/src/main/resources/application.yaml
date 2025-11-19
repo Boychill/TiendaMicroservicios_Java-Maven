@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: eureka-server
+  main:
+    # Soluciona el error de "BeanDefinitionOverrideException"
+    allow-bean-definition-overriding: true
+    # Soluciona el error de "Circular Reference"
+    allow-circular-references: true
+
+# Configuración de Eureka
+eureka:
+  client:
+    # Como este servicio ES el servidor, no intentará
+    # registrarse a sí mismo.
+    register-with-eureka: false
+    # No necesita obtener una copia del registro de nadie más.
+    fetch-registry: false
+  server:
+    # Evita un delay al iniciar, útil para desarrollo
+    wait-time-in-ms-when-sync-empty: 0
+
+# Puerto del servidor
+server:
+  port: 8761

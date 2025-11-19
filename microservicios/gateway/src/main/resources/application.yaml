@@ -1,0 +1,41 @@
+server:
+  port: 8080 # Puerto principal de la aplicación
+
+spring:
+  application:
+    name: gateway
+  
+  cloud:
+    gateway:
+      routes:
+        # --- Ruta para el Servicio de Autenticación ---
+        - id: auth-service
+          uri: lb://auth # "lb" usa Eureka para encontrar el servicio "auth"
+          predicates:
+            - Path=/api/auth/**
+
+        # --- Ruta para el Servicio de Catálogo ---
+        - id: catalogo-service
+          uri: lb://catalogo # "lb" usa Eureka para encontrar el servicio "catalogo"
+          predicates:
+            - Path=/api/catalogo/**
+        
+        # --- Ruta para el Servicio de Pedidos ---
+        - id: pedidos-service
+          uri: lb://pedidos # "lb" usa Eureka para encontrar el servicio "pedidos"
+          predicates:
+            - Path=/api/pedidos/**
+
+# Configuración del cliente Eureka
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  # ¡IMPORTANTE! Arreglo para el error DNS 'NXDOMAIN'
+  instance:
+    prefer-ip-address: true
+
+# Clave secreta (debe ser IDÉNTICA a la del servicio auth)
+app:
+  jwt:
+    secret: "bXN1cGVyc2VjcmV0a2V5Zm9ydGhlc3RvcmUxMjM0NVhZWlo="

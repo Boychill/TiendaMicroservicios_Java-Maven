@@ -1,0 +1,20 @@
+spring:
+  eureka:
+    client:
+      enabled: false
+  
+  # Configuración para Testcontainers (Docker)
+  # Si Docker te falla, cambia esto a tu BD local como hicimos en 'auth'
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///testdb
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+app:
+  jwt:
+    secret: "bXN1cGVyc2VjcmV0a2V5Zm9ydGhlc3RvcmUxMjM0NVhZWlo="
