@@ -23,10 +23,10 @@ public class Order {
     private UUID id;
 
     @Column(nullable = false)
-    private UUID userId; // ID del usuario que hizo el pedido
+    private UUID userId;
 
     @Column(nullable = false)
-    @Builder.Default // Para que el builder use este valor por defecto
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
@@ -39,6 +39,7 @@ public class Order {
 
     @Column(nullable = false)
     private String direccionEnvio;
+
     private Double latitud;
     private Double longitud;
 

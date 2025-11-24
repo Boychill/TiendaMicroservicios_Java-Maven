@@ -16,7 +16,7 @@ spring:
 
         # --- Ruta para el Servicio de Catálogo ---
         - id: catalogo-service
-          uri: lb://catalogo # "lb" usa Eureka para encontrar el servicio "catalogo"
+          uri: lb://catalogo  
           predicates:
             - Path=/api/catalogo/**
         

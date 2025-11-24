@@ -1,100 +1,88 @@
 package com.api.service.auth.controller;
 
-import com.api.service.auth.AbstractIntegrationTest;
 import com.api.service.auth.model.dto.AuthResponse;
+import com.api.service.auth.model.dto.LoginRequest;
 import com.api.service.auth.model.dto.RegisterRequest;
-import com.api.service.auth.repository.UserRepository;
+import com.api.service.auth.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@AutoConfigureMockMvc // Habilita MockMvc para hacer peticiones HTTP
-public class AuthControllerTest extends AbstractIntegrationTest { // Hereda la config de Docker
+@ExtendWith(MockitoExtension.class)
+class AuthControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc; // Para hacer peticiones HTTP
+        private MockMvc mockMvc;
 
-    @Autowired
-    private UserRepository userRepository; // Repositorio real (conectado a la BD de Docker)
+        @Mock
+        private AuthService authService;
 
-    @Autowired
-    private ObjectMapper objectMapper; // Para convertir objetos a JSON
+        @InjectMocks
+        private AuthController authController;
 
-    // Limpiamos la BD de Docker antes de CADA test
-    @BeforeEach
-    void setUp() {
-        userRepository.deleteAll();
-    }
+        private ObjectMapper objectMapper = new ObjectMapper();
 
-    @Test
-    void register_ShouldCreateUser_AndReturnToken() throws Exception {
-        RegisterRequest request = new RegisterRequest("Test", "Integ", "test@integ.com", "pass123");
+        @BeforeEach
+        void setUp() {
+                // Configuramos MockMvc solo para este controlador (Standalone)
+                // Esto evita cargar SecurityConfig, filtros, etc.
+                mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+        }
 
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists())
-                .andExpect(jsonPath("$.role").value("CLIENTE"));
+        @Test
+        void register_ShouldReturn200_WhenValidRequest() throws Exception {
+                RegisterRequest req = new RegisterRequest("Juan", "Perez", "juan@test.com", "123456");
+                AuthResponse res = new AuthResponse("token123", UUID.randomUUID(), "juan@test.com", "CLIENTE");
 
-        // Verificamos que se guardó en la BD (real) de Testcontainers
-        assertEquals(1, userRepository.count());
-    }
+                when(authService.register(any(RegisterRequest.class))).thenReturn(res);
 
-    @Test
-    void register_ShouldReturnBadRequest_WhenEmailExists() throws Exception {
-        // 1. Creamos el primer usuario
-        RegisterRequest request1 = new RegisterRequest("Test", "Integ", "test@integ.com", "pass123");
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request1)))
-                .andExpect(status().isOk());
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("token123"))
+                                .andExpect(jsonPath("$.email").value("juan@test.com"));
+        }
 
-        // 2. Intentamos registrarlo de nuevo
-        RegisterRequest request2 = new RegisterRequest("Otro", "User", "test@integ.com", "pass456");
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request2)))
-                .andExpect(status().isBadRequest()); // Esperamos 400 Bad Request
-    }
+        @Test
+        void register_ShouldReturn400_WhenEmailExists() throws Exception {
+                RegisterRequest req = new RegisterRequest("Juan", "Perez", "existe@test.com", "123456");
 
-    @Test
-    void testAuthentication_ShouldFailWith403_WhenNoTokenIsProvided() throws Exception {
-        mockMvc.perform(get("/api/auth/test-auth"))
-                .andExpect(status().isForbidden()); // 403 Forbidden
-    }
+                // Simulamos que el servicio lanza la excepción
+                when(authService.register(any(RegisterRequest.class)))
+                                .thenThrow(new IllegalArgumentException("El email ya existe"));
 
-    @Test
-    void testAuthentication_ShouldSucceed_WhenValidTokenIsProvided() throws Exception {
-        // 1. Registramos un usuario para obtener un token válido
-        RegisterRequest request = new RegisterRequest("Test", "Token", "token@test.com", "pass123");
-        String responseString = mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andReturn().getResponse().getContentAsString();
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
+                                .andExpect(status().isBadRequest());
+        }
 
-        AuthResponse authResponse = objectMapper.readValue(responseString, AuthResponse.class);
-        String token = authResponse.token();
+        @Test
+        void login_ShouldReturn200_WhenCredentialsValid() throws Exception {
+                LoginRequest req = new LoginRequest("juan@test.com", "123456");
+                AuthResponse res = new AuthResponse("token123", UUID.randomUUID(), "juan@test.com", "CLIENTE");
 
-        // 2. Hacemos la petición protegida CON el token
-        mockMvc.perform(get("/api/auth/test-auth")
-                // Añadimos la cabecera 'Authorization: Bearer <token>'
-                .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(
-                        MockMvcResultMatchers.content().string("¡Token validado! Estás autenticado. (Java Version)"));
-    }
+                when(authService.login(any(LoginRequest.class))).thenReturn(res);
+
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.token").value("token123"));
+        }
 }

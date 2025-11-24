@@ -1,0 +1,66 @@
+package com.api.service.auth.security;
+
+import com.api.service.auth.model.entity.Role;
+import com.api.service.auth.model.entity.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class JwtServiceTest {
+
+    private JwtService jwtService;
+    
+    // Una clave de ejemplo en Base64 (HMAC requiere al menos 256 bits)
+    private final String SECRET = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+    private final long EXPIRATION = 3600000; // 1 hora
+
+    @BeforeEach
+    void setUp() {
+        // Inyectamos valores manualmente como si fuera Spring
+        jwtService = new JwtService(SECRET, EXPIRATION);
+    }
+
+    @Test
+    void generateToken_ShouldReturnValidToken() {
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email("test@demo.com")
+                .role(Role.ADMIN)
+                .build();
+
+        String token = jwtService.generateToken(user);
+
+        assertNotNull(token);
+        assertFalse(token.isEmpty());
+    }
+
+    @Test
+    void extractEmail_ShouldReturnCorrectEmail() {
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email("test@demo.com")
+                .role(Role.CLIENTE)
+                .build();
+
+        String token = jwtService.generateToken(user);
+        String extractedEmail = jwtService.extractEmail(token);
+
+        assertEquals("test@demo.com", extractedEmail);
+    }
+
+    @Test
+    void isTokenValid_ShouldReturnTrue_ForValidUser() {
+        User user = User.builder()
+                .id(UUID.randomUUID())
+                .email("test@demo.com")
+                .role(Role.CLIENTE)
+                .build();
+
+        String token = jwtService.generateToken(user);
+        
+        assertTrue(jwtService.isTokenValid(token, user));
+    }
+}

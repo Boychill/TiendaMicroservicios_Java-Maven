@@ -1,2 +1,80 @@
-mvn spring-boot:run
-mvn spring-boot:run "-Dmaven.test.skip=true"
+================================================================
+GUÍA DE DESPLIEGUE Y EJECUCIÓN - PROYECTO TIENDA
+================================================================
+
+1. RUTA DEL PROYECTO (BACKEND)
+----------------------------------------------------------------
+IMPORTANTE: Para que los scripts de automatización (.bat) funcionen, 
+la carpeta raíz del proyecto debe estar obligatoriamente en:
+
+   C:\Tienda
+
+
+2. BASE DE DATOS (PostgreSQL)
+----------------------------------------------------------------
+Asegúrate de tener PostgreSQL corriendo y crea las siguientes 
+bases de datos antes de iniciar los servicios:
+
+   - auth_db      (Para el microservicio de autenticación)
+   - pedidos_db   (Para el microservicio de pedidos)
+
+
+3. EJECUCIÓN DEL BACKEND (COMANDOS MAVEN)
+----------------------------------------------------------------
+Abre una terminal (CMD/PowerShell) en la ruta C:\Tienda.
+
+--- EJECUCIÓN ESTÁNDAR ---
+A) Ejecución normal:
+   mvn spring-boot:run
+
+B) Ejecución rápida (Salta los tests para iniciar más rápido):
+   mvn spring-boot:run "-Dmaven.test.skip=true"
+
+--- LIMPIEZA Y EJECUCIÓN (RECOMENDADO SI HAY ERRORES) ---
+C) Limpiar proyecto y correr (Borra archivos viejos/basura):
+   mvn clean spring-boot:run
+
+D) Limpiar, saltar tests y correr (La opción más limpia y rápida):
+   mvn clean spring-boot:run "-Dmaven.test.skip=true"
+
+--- USANDO MAVEN WRAPPER (SIN INSTALAR MAVEN) ---
+Si no tienes Maven instalado en tus variables de entorno, usa 
+el archivo "mvnw" que viene en el proyecto:
+
+E) Ejecutar con Wrapper (Windows):
+   mvnw spring-boot:run
+
+F) Ejecutar con Wrapper (Linux/Mac):
+   ./mvnw spring-boot:run
+
+
+4. COMANDOS DE MANTENIMIENTO Y SOLUCIÓN DE PROBLEMAS
+----------------------------------------------------------------
+Si tienes errores de dependencias o librerías que no se descargan:
+
+- Forzar actualización de dependencias (Snapshot update):
+  mvn clean install -U
+
+- Recompilar todo el proyecto sin ejecutarlo (para verificar errores):
+  mvn clean install "-Dmaven.test.skip=true"
+
+- Verificar versión de Java (Debe ser compatible con Java 21):
+  java -version
+
+
+5. CONFIGURACIÓN FRONTEND (ANDROID - DISPOSITIVO FÍSICO)
+----------------------------------------------------------------
+Para probar la App en un celular real conectado a la misma red Wi-Fi:
+
+1. En tu PC, abre terminal y escribe: ipconfig
+2. Copia tu "Dirección IPv4" (ejemplo: 192.168.1.183).
+3. En Android Studio, edita el archivo:
+   app/src/main/java/com/api/frotendtiendaappmovil/di/NetworkModule.kt
+
+4. Actualiza la variable BASE_URL con tu IP real:
+   private const val BASE_URL = "http://192.168.1.183:8080/api/"
+
+NOTA: Si usas SOLAMENTE el Emulador de Android en la PC, 
+      puedes usar la dirección puente: "http://10.0.2.2:8080/api/"
+
+..

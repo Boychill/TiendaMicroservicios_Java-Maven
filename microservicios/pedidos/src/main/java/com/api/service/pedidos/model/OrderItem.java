@@ -22,7 +22,7 @@ public class OrderItem {
     private UUID id;
 
     @Column(nullable = false)
-    private String productId; // ID de MongoDB del producto
+    private String productId;
 
     @Column(nullable = false)
     private String nombre;
@@ -35,6 +35,6 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
-    @JsonIgnore // Evita recursión infinita al convertir a JSON
+    @JsonIgnore
     private Order order;
 }

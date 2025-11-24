@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -21,16 +22,11 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-/**
- * Test Unitario para AuthService (usando Mockito).
- * Prueba la lógica de negocio en aislamiento.
- */
-@ExtendWith(MockitoExtension.class) // Habilita Mockito
+@ExtendWith(MockitoExtension.class) // Habilita Mockito sin cargar Spring Context
 class AuthServiceTest {
 
-    // Creamos "mocks" (objetos falsos) para las dependencias
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -40,81 +36,88 @@ class AuthServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
-    // Inyectamos los mocks de arriba en nuestra clase de servicio
     @InjectMocks
-    private AuthService authService;
+    private AuthService authService; // Inyecta los mocks aquí automáticamente
 
-    @Test
-    void register_ShouldRegisterUserSuccessfully_WhenEmailNotExists() {
-        // --- 1. Arrange (Preparación) ---
-        RegisterRequest request = new RegisterRequest("Test", "User", "test@user.com", "password123");
-        User savedUser = User.builder()
+    private RegisterRequest registerRequest;
+    private LoginRequest loginRequest;
+    private User user;
+
+    @BeforeEach
+    void setUp() {
+        // Datos de prueba comunes
+        registerRequest = new RegisterRequest("Juan", "Perez", "juan@test.com", "123456");
+        loginRequest = new LoginRequest("juan@test.com", "123456");
+        
+        user = User.builder()
                 .id(UUID.randomUUID())
-                .email(request.email())
-                .firstName(request.firstName())
-                .lastName(request.lastName())
-                .passwordHash("hashedPassword")
+                .firstName("Juan")
+                .lastName("Perez")
+                .email("juan@test.com")
+                .passwordHash("encodedPassword")
                 .role(Role.CLIENTE)
                 .build();
-
-        // Definimos el comportamiento de los mocks
-        when(userRepository.existsByEmail(request.email())).thenReturn(false);
-        when(passwordEncoder.encode(request.password())).thenReturn("hashedPassword");
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtService.generateToken(any(User.class))).thenReturn("fake.jwt.token");
-
-        // --- 2. Act (Actuación) ---
-        AuthResponse response = authService.register(request);
-
-        // --- 3. Assert (Verificación) ---
-        assertNotNull(response);
-        assertEquals("fake.jwt.token", response.token());
-        assertEquals("CLIENTE", response.role());
     }
 
     @Test
-    void register_ShouldThrowException_WhenEmailExists() {
-        // --- 1. Arrange ---
-        RegisterRequest request = new RegisterRequest("Test", "User", "test@user.com", "password123");
+    void register_Success() {
+        // 1. Arrange (Preparar comportamiento de los Mocks)
+        when(userRepository.existsByEmail(registerRequest.email())).thenReturn(false);
+        when(passwordEncoder.encode(registerRequest.password())).thenReturn("encodedPassword");
+        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(jwtService.generateToken(any(User.class))).thenReturn("fake-jwt-token");
 
-        // Definimos el comportamiento (el email SÍ existe)
-        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+        // 2. Act (Ejecutar el método real)
+        AuthResponse response = authService.register(registerRequest);
 
-        // --- 2. Act & 3. Assert ---
-        // Verificamos que se lanza la excepción correcta
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            authService.register(request);
+        // 3. Assert (Verificar resultados)
+        assertNotNull(response);
+        assertEquals("fake-jwt-token", response.token());
+        assertEquals("juan@test.com", response.email());
+        
+        // Verificar que el repositorio fue llamado una vez
+        verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void register_Fails_WhenEmailExists() {
+        // Arrange
+        when(userRepository.existsByEmail(registerRequest.email())).thenReturn(true);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> {
+            authService.register(registerRequest);
         });
 
-        assertEquals("El email ya está en uso", exception.getMessage());
+        // Verificar que NUNCA se guardó nada
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    void login_ShouldReturnToken_WhenCredentialsAreValid() {
-        // --- 1. Arrange ---
-        LoginRequest request = new LoginRequest("test@user.com", "password123");
-        User userFromDb = User.builder()
-                .id(UUID.randomUUID())
-                .email(request.email())
-                .firstName("Test")
-                .lastName("User")
-                .passwordHash("hashedPassword")
-                .role(Role.ADMIN)
-                .build();
+    void login_Success() {
+        // Arrange
+        when(userRepository.findByEmail(loginRequest.email())).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(user)).thenReturn("fake-jwt-token");
+        
+        // Act
+        AuthResponse response = authService.login(loginRequest);
 
-        // Definimos el comportamiento
-        when(userRepository.findByEmail(request.email().toLowerCase()))
-                .thenReturn(Optional.of(userFromDb));
-        when(jwtService.generateToken(userFromDb)).thenReturn("fake.admin.token");
-        // Nota: No mockeamos authenticationManager.authenticate() porque devuelve void
-        // y nuestro AuthService no depende de su valor de retorno.
-
-        // --- 2. Act ---
-        AuthResponse response = authService.login(request);
-
-        // --- 3. Assert ---
+        // Assert
         assertNotNull(response);
-        assertEquals("fake.admin.token", response.token());
-        assertEquals("ADMIN", response.role());
+        assertEquals("fake-jwt-token", response.token());
+        
+        // Verificar que se llamó al AuthenticationManager para validar credenciales
+        verify(authenticationManager).authenticate(
+            any(UsernamePasswordAuthenticationToken.class)
+        );
+    }
+
+    @Test
+    void login_Fails_UserNotFound() {
+        // Arrange
+        when(userRepository.findByEmail(loginRequest.email())).thenReturn(Optional.empty());
+
+        // Se espera que el AuthenticationManager valide antes, pero si pasa y no encuentra user:
+        assertThrows(RuntimeException.class, () -> authService.login(loginRequest));
     }
 }

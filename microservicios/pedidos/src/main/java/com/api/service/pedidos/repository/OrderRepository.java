@@ -10,9 +10,7 @@ import java.util.UUID;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, UUID> {
 
-    // Buscar mis pedidos (ordenados por fecha)
     List<Order> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-    // Buscar todos (para admin)
     List<Order> findAllByOrderByCreatedAtDesc();
 }

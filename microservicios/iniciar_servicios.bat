@@ -31,7 +31,7 @@ timeout /t 5 /nobreak > nul
 ECHO.
 ECHO [2/4] Iniciando 'gateway' (Puerto 8080)...
 cd C:\Tienda\microservicios\gateway
-START "Gateway Service (8080)" cmd /c "mvn spring-boot:run "-Dmaven.test.skip=true""
+START "Gateway Service (8080)" cmd /c "mvn spring-boot:run"
 
 timeout /t 5 /nobreak > nul
 
@@ -39,7 +39,7 @@ timeout /t 5 /nobreak > nul
 ECHO.
 ECHO [3/4] Iniciando 'catalogo' (Puerto 8082)...
 cd C:\Tienda\microservicios\catalogo
-START "Catalogo Service (8082)" cmd /c "mvn spring-boot:run "-Dmaven.test.skip=true""
+START "Catalogo Service (8082)" cmd /c "mvn spring-boot:run"
 
 timeout /t 5 /nobreak > nul
 
@@ -47,7 +47,7 @@ timeout /t 5 /nobreak > nul
 ECHO.
 ECHO [4/4] Iniciando 'pedidos' (Puerto 8083)...
 cd C:\Tienda\microservicios\pedidos
-START "Pedidos Service (8083)" cmd /c "mvn spring-boot:run "-Dmaven.test.skip=true""
+START "Pedidos Service (8083)" cmd /c "mvn spring-boot:run"
 
 ECHO.
 ECHO ======================================
